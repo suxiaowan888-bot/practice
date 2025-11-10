@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web Components Homework</title>
+    
+    <script defer>
+        // Product Card
+        class ProductCard extends HTMLElement {
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' })
+            }
+ 
+            connectedCallback() {
+                const name = this.getAttribute('name')
+                const price = this.getAttribute('price');
+
+                this.shadowRoot.innerHTML = `
+                    <style>
+                        .card{
+                            border: 2px solid red;
+                            padding: 20px;
+                            width: 250px;
+                            display: inline-block;
+                            margin: 100px;
+                        }
+                        .card:hover {
+                            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                        }
+                        img {
+                            width: 100%;
+                            height: 300px;
+                             object-fit: contain;
+                            
+                        }
+                        h3{
+                            margin: 10px 0;
+                        }
+                        .price {
+                            color: black;
+                            font-size: 20px;
+                            font-weight: bold;
+                        }
+                        button {
+                            background: #4CAF50;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            cursor: pointer;
+                            width: 100%;
+                        }
+                        button:hover{
+                            background: #45a049;
+                        }
+                    </style>
+                    
+                    <div class="card">
+                        <slot name="image"></slot>
+                        <h3>${name}</h3>
+                        <div class="price">${price}</div>
+                        <slot name="description"></slot>
+                        <button id="buyBtn">Buy Now</button>
+                    </div>
+                `
+
+                // event listener
+                const button = this.shadowRoot.getElementById('buyBtn')
+                button.addEventListener('click', () => {
+                    console.log('Button clicked');
+                    this.dispatchEvent(new CustomEvent('purchase', {
+                        detail: { name, price },
+                        bubbles: true,
+                        composed: true,
+                    }));
+                    alert(`Purchased: ${name} for ${price}`)
+                });
+            }
+        }
+
+        customElements.define('product-card', ProductCard);  
+
+
+        //  Todo List
+        class TodoList extends HTMLElement {
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });  
+                this.todos = []
+            }
+
+            connectedCallback(){
+                this.render()
+            }
+
+            render() {
+                this.shadowRoot.innerHTML = `
+                    <style>
+                        .container{
+                            max-width: 400px;
+                            margin: 20px auto;
+                            padding: 20px;
+                            border: 1px solid #ddd;
+                        }
+                        input {
+                            padding: 8px;
+                            width: 70%;
+                            font-size: 14px;
+                        }
+                        button{
+                            padding: 8px 15px;
+                            background: #4CAF50;
+                            color: white;
+                            border: none;
+                            cursor: pointer;
+                        }
+                        ul {
+                            list-style: none;
+                            padding: 0;
+                        }
+                        li {
+                            padding: 10px;
+                            border-bottom: 1px solid #eee;
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        .delete{
+                            background: #f44336;
+                            color: white;
+                            border: none;
+                            padding: 5px 10px;
+                            cursor: pointer;
+                        }
+                    </style>
+                    
+                    <div class="container">
+                        <input type="text" id="input" placeholder="Add a task...">
+                        <button id="addBtn">Add</button>
+                        <ul id="list">${this.renderList()}</ul>
+                    </div>
+                `;
+
+                this.attachEvents()
+            }
+
+            renderList() {
+                if (this.todos.length === 0) {
+                    return '<li>No tasks yet</li>'
+                }
+                return this.todos.map((todo, index) => 
+                    `<li>
+                        ${todo}
+                        <button class="delete" data-index="${index}">Delete</button>
+                    </li>`
+                ).join('');
+            }
+
+            attachEvents() {
+                const input = this.shadowRoot.getElementById('input')
+                const addBtn = this.shadowRoot.getElementById('addBtn');
+
+                addBtn.addEventListener('click', () => {
+                    if (input.value.trim()) {
+                        console.log('Adding:', input.value);
+                        this.todos.push(input.value.trim())
+                        input.value = '';
+                        this.render()
+                        
+                        // emit custom event
+                        this.dispatchEvent(new CustomEvent('listChanged', {
+                            detail: { items: this.todos },
+                            bubbles: true,
+                            composed: true,
+                        }));
+                    }
+                });
+
+                // Delete buttons
+                this.shadowRoot.querySelectorAll('.delete').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const index = e.target.dataset.index
+                        this.todos.splice(index, 1);
+                        this.render()
+                        
+                        this.dispatchEvent(new CustomEvent('listChanged', {
+                            detail: { items: this.todos },
+                            bubbles: true,
+                            composed: true
+                        }));
+                    })
+                });
+            }
+        }
+
+        customElements.define('todo-list', TodoList);  
+    </script>
+</head>
+<body>
+    <h1>Exercise A - Product Card</h1>
+    
+    <product-card name="toys" price="$30">
+        <img slot="image" src="https://media.s-bol.com/mqjOr3VggEqr/543x840.jpg" alt="toys">
+        <p slot="description">A toy with cool features</p>
+    </product-card>
+
+    <product-card name="MacBook Pro" price="$2499">
+        <img slot="image" src="https://tse2.mm.bing.net/th/id/OIP.LD45eMCs5_kbTRMxIzm7bwHaFc?cb=ucfimgc2&rs=1&pid=ImgDetMain&o=7&rm=3" alt="laptop">
+        <p slot="description">Powerful laptop for work</p>
+    </product-card>
+
+    <hr>
+
+    <h1>Exercise B - Todo List</h1>
+    <todo-list></todo-list>
+
+</body>
+</html>
